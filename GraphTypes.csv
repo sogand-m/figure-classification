@@ -1,0 +1,33 @@
+Type,Description,Quantitative
+Alluvial,Confluence or sankey diagram,1
+Area,Area based diagram,1
+Bar,Bar diagram,1
+Bar Stacked Diverging,,1
+Bar Grouped,,1
+Bar Stacked,,1
+Beeswarm,,1
+Boxplot,,1
+Bubble,,1
+Bump,"A parallel coordinates diagrams reporting ranking variation",1
+Code,A figure showing code in any formal programming language,0
+Dendrogram,,1
+Donut,,1
+Dot,,1
+Forest,,1
+Graph,representation of a graph (vertices and edges),0
+Heatmap,,1
+Line,,1
+Picture,Photo or image,0
+Pie,,1
+Radar,Radar or Kiviat diagram,1
+Scatter,Scatter dot plot,1
+Schema,A diagram or schema used to explain something (does not encode quantitative values,0
+Screenshot,Screenshot of a program,0
+Slope,,1
+Sunburst,,1
+Surface,A 3D diagram showing a surface,1
+Table,A table reported as a figure,0
+Treemap,,1
+Venn,A Venn diagram with sets,1
+Violin,,1
+Wordcloud,"Wordcloud with font size encoding frequency",0
