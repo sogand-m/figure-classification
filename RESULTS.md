@@ -160,10 +160,10 @@ Measured on 10 figures per model, on the same machine (Apple Silicon laptop,
 models served by Ollama), after one warm-up call so that model loading is not
 counted.
 
-| Model | Seconds per figure | 112 figures | 6342 figures |
-|---|---|---|---|
-| llava 7B | ~8 s | 15 min | **14 hours** |
-| qwen2.5vl 7B | ~63 s | 118 min | **4.6 days** |
+| Model | Ollama tag | Seconds per figure | 112 figures | 6342 figures |
+|---|---|---|---|---|
+| llava 7B | `llava:latest` | ~8 s | 15 min | **14 hours** |
+| qwen2.5vl 7B | `qwen2.5vl:7b` | ~63 s | 118 min | **4.6 days** |
 
 **qwen is roughly 8× slower than llava**, despite both being 7B models. The
 cause is the same one that forces a larger context window: qwen encodes an
@@ -277,6 +277,25 @@ pixels and is the first alternative to test.
 library function: image in, vector out. Only the logistic regression on top is
 trained.
 
+## Run time
+
+Measured on 122 figures on a Colab T4 GPU, with
+`google/siglip2-base-patch16-224` as the encoder.
+
+| Step | Time |
+|---|---|
+| Encoding (`google/siglip2-base-patch16-224`, frozen) | 5.34 s total — **43.8 ms per figure** |
+| Training the classifier | 70 ms, once, for the whole dataset |
+| Predicting | 0.043 ms per figure |
+| **Projected for 6342 figures** | **4.6 minutes** |
+
+Almost all the cost is the encoder. Training the logistic regression is a
+one-off 70 ms for the entire dataset, and predicting is 0.043 ms per figure —
+about a thousand times cheaper than encoding, and effectively free.
+
+Note that training time does not recur: once fitted, the classifier is reused.
+Only the encoding happens per figure.
+
 ## Results (original labels)
 
 Evaluated on 110 figures from 23 papers.
@@ -305,11 +324,30 @@ are illustration, not evidence.
 |---|---|---|---|---|
 | llava 7B, zero-shot | 71.7% | no | ~7B | ~8 s |
 | qwen2.5vl 7B, zero-shot | 84.8% | no | ~7B | ~63 s |
-| SigLIP 2 + linear probe | **88.2%** | yes (a few hundred parameters) | ~90M | to be measured |
+| SigLIP 2 + linear probe | **88.2%** | yes (a few hundred parameters) | ~90M | ~44 ms |
 
 On this ground truth the trained classifier leads by 3.4 points while using
 roughly 100–300× less compute. That was the state of the work before the labels
 were examined.
+
+### Cost at scale
+
+| Approach | Model | Parameters | Hardware | Per figure | 112 figures | 6342 figures |
+|---|---|---|---|---|---|---|
+| 1 | `llava:latest` | ~7B | laptop (Ollama) | ~8 s | 15 min | 14 hours |
+| 1 | `qwen2.5vl:7b` | ~7B | laptop (Ollama) | ~63 s | 118 min | **4.6 days** |
+| 2 | `google/siglip2-base-patch16-224` + logistic regression | ~90M | Colab T4 GPU | ~44 ms | 5 s | **4.6 minutes** |
+
+The probe is roughly **1400× faster per figure** than qwen. For the full
+Torchiano corpus that is the difference between 4.6 days and 4.6 minutes.
+
+This gap is the probe's main argument, and it survives the label correction that
+removed its accuracy advantage. It does not matter for the end-use case — an
+author checking a seven-figure paper waits about seven minutes with qwen, which
+is tolerable — but it matters for building and validating the tool over
+thousands of figures, and it will matter at stage 4, where roughly 28 questions
+per figure multiply the VLM's cost while leaving the probe's encoding cost
+unchanged.
 
 **Caveats, already true at this point:**
 
@@ -320,10 +358,13 @@ were examined.
   fixed before any paired test.
 - The protocols differ: the VLM is evaluated zero-shot on every figure, the
   probe through cross-validation.
-- The timings are not a like-for-like comparison: the VLMs are timed on a laptop
-  through Ollama, the probe runs on a Colab T4 GPU. Parameter count (~7B vs
-  ~90M) is the hardware-independent comparison; a same-machine benchmark would
-  be needed for a fair wall-clock figure.
+- The timings are not a like-for-like comparison: the VLMs are timed on an
+  Apple Silicon laptop through Ollama, the probe on a Colab T4 GPU. Parameter
+  count (~7B vs ~90M) is the hardware-independent comparison, and a same-machine
+  benchmark would be needed for an exact wall-clock figure. The measured ratio
+  (~1400×) is far larger than any plausible hardware effect, so the conclusion
+  holds, but the precise multiplier should not be quoted as if both ran on
+  identical hardware.
 
 ---
 
@@ -458,8 +499,9 @@ fixed; and the measurement itself is unpublished.
    `openai/clip-vit-base-patch32` (the older standard, as a reference point).
    With n ≈ 122 a difference of 1–2 points is not meaningful; only a large gap,
    or one confirmed over several random splits, should be reported as a result.
-8. Measure the probe's own run time per figure, separating encoder time from
-   classifier time, and ideally on the same machine as the VLMs.
+8. ~~Measure the probe's own run time per figure~~ — done (43.8 ms encoding,
+   0.043 ms prediction). Still worth repeating on the same machine as the VLMs
+   for an exact like-for-like figure.
 
 # 6. Then: stages 2–4
 
